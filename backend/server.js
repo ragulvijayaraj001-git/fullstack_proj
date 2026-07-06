@@ -1,37 +1,68 @@
+const express = require("express");
 require("dotenv").config();
 
-const app = require("./app");
+const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
-const db =
-require("./config/db");
+const authRoutes = require("./routes/authroute");
+const studentRoutes = require("./routes/studentroute");
+const attendanceRoutes = require("./routes/attendanceroute");
+const dashboardRoutes = require("./routes/dashboardroute");
+const pdfRoutes = require("./routes/pdfroute");
 
-const seedSuperAdmin =
-require("./seeders/superAdminSeeder");
+const app = express();
 
-db.connect((err) => {
+/* ===========================
+   Security Middleware
+=========================== */
 
-    if (err) {
+app.use(helmet());
 
-        console.log(err);
+app.use(cors());
 
-    } else {
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-        console.log(
-            "Database Connected"
-        );
+/* ===========================
+   Rate Limiter
+=========================== */
 
-        seedSuperAdmin();
-
-    }
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3, // Only for testing
+  message: {
+    success: false,
+    message: "Too many requests. Please try again after 15 minutes.",
+  },
 });
 
-app.listen( //telling it to run in the port mentioned in .env file
-    process.env.PORT,
-    () => {
+app.use("/api", limiter);
 
-        console.log(
-            `Server Running On Port ${process.env.PORT}`
-        );
+/* ===========================
+   Routes
+=========================== */
 
-    }
-);
+app.use("/api", authRoutes);
+app.use("/api", studentRoutes);
+app.use("/api", attendanceRoutes);
+app.use("/api", dashboardRoutes);
+app.use("/api", pdfRoutes);
+
+/* ===========================
+   Default Route
+=========================== */
+
+app.get("/", (req, res) => {
+  res.send("🚀 Smart Campus Attendance Management API is Running...");
+});
+
+/* ===========================
+   Server
+=========================== */
+
+const PORT = process.env.PORT || 5005;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
